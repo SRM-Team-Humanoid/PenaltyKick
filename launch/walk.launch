@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="soccer" name="publisher" type="imagePub.py" output="screen"/>
+  <node pkg="soccer" name="subscriber" type="Soccer.py" output="screen"/>
+</launch>

@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from signal import pause
 from bluedot import BlueDot
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import Bool
 import dynamixel
 import os
 #--------------------------------------------------------------OFFSETS------------------------------------------------------------------------------
@@ -189,8 +189,81 @@ class Custom(object) :
   
 			motionset.run(speed)
 
+class Head(object) :
+	def __init__(self,dxl,msg) :
+		self.pan = 19
+		self.tilt = 20
+		self.dxl = dxl
+		self.msg = msg
+		self.get = bool()
+		self.pan_left_to_right()
+	
+	def dxl_pan_write(self,write) :
+		self.dxl.angleWrite(self.pan,write)
 
+	def dxl_tilt_write(self,write) :
+		self.dxl.angleWrite(self.tilt,write)
+ 
+	def pan_left_to_right(self,pan = 1.0) :
+		if not self.msg :
+			self.dxl_pan_write(pan)
+			time.sleep(0.01)
+			pan = pan + 1.0		
+			if pan == 90 :
+				self.pan_right_to_left()
+
+		else :
+			self.get = pan;
+			return None
+
+	def pan_right_to_left(self,pan = 90.0) :
+		if not self.msg :		
+			self.dxl_pan_write(pan) 
+			time.sleep(0.01)
+			pan = pan-1
+			if pan == -90 :
+				self.pan_left_to_right()
+
+		else :
+			self.get = pan
+			return None
+
+	def publish(self) :
+		return self.get
+flag = 1
+def listener(data) :
+	global flag
+	threshold = 0
+	head = Head(d,data.data)
+	pos = head.publish()
+  	pos = (pos-threshold)/6
+	flag1 = False
+	if data.data :
+		flag1 = True 
+	if flag == 1 and flag1 :
+		flag=0
+		if pos > threshold :
+			while pos > 0 :
+				l_turn.run()
+				time.sleep(0.1)
+				pos -= 1
+	
+		elif pos < threshold :
+			while pos < 0 :
+				r_turn.run()
+				time.sleep(0.1)
+				pos += 1			
 		
+	'''walk_iter = 10
+	d.angleWrite(19,0)
+	balance.run()
+	time.sleep(0.01)
+	walk_init.run()
+	while walk_iter > 0 :
+		fast_walk.run()
+		walk_iter -= 1'''
+
+
 #--------------------------------------------------------------MOTIONS--------------------------------------------------------------------------------
 json = JSON(path)
 balance = Motionset(json.parse(motion="2 Balance"),offset=[darwin,hand])
@@ -211,8 +284,7 @@ fast_walk = Custom(motionset=[fast_left,fast_right])
 r_turn = Motionset(json.parse(motion="27 RT"),speed=1.2,offset=[darwin])
 l_turn = Motionset(json.parse(motion="28 LT"),speed=1.2,offset=[darwin])
 #-----------------------------------------------------------------------------------------------------------------------------------------------------   
-mess=0
-def head(msg) :
+'''def head(msg) :
 	rospy.loginfo(msg.data)
 	if msg.data == "not" or msg.data == "not in range" :
 		for pos in range(-90, 91,1):
@@ -234,43 +306,16 @@ def head(msg) :
     			dxl.set_moving_speed({19: speed})
     			dxl.set_goal_position({19:pos})
 			mess = pos
-				
-			
-
-threshold = 0
-def listener(pos) :
-	pos = (pos-threshold)/6
-	flag = False
-	if not flag :
-		if pos > threshold :
-			while pos > 0 :
-				l_turn.run()
-				time.sleep(0.1)
-				pos -= 1
+				'''
 	
-		elif pos < threshold :
-			while pos < 0 :
-				r_turn.run()
-				time.sleep(0.1)
-				pos += 1			
-		
-	walk_iter = 10
-	d.angleWrite(19,0)
-	balance.run()
-	time.sleep(0.01)
-	walk_init.run()
-	while walk_iter > 0 :
-		fast_walk.run()
-		walk_iter -= 1
  
 if __name__ == "__main__":
 	d = Dynamixel(lock=20)
 	d.angleWrite(19,0)
 	d.angleWrite(20,65)
-	
 	balance.run()
 	raw_input("Proceed?")
         rospy.init_node('Dash', anonymous=True)
-        rospy.Subscriber('detect',String,head,queue_size=10)
+        rospy.Subscriber('detect',Bool,listener,queue_size=10)
         rospy.spin()
 	

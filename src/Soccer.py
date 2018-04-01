@@ -60,6 +60,8 @@ class Dynamixel(object) :
 	def returnPos(self,ids) :
 
 		return dxl.get_present_position((ids,))	
+
+
 class JSON(object) :
 	def __init__(self,file) :
 		try :
@@ -93,7 +95,7 @@ class JSON(object) :
 			try : 
 				if motion == j["name"] :
 					for unit in j["units"]["unit"] :
-						motionset.append(Motionset(json.parse(motion=unit["main"]),speed=float(unit["mainSpeed"])/2.0,offset=offset))
+						motionset.append(Motionset(json.parse(motion=unit["main"]),speed=float(unit["mainSpeed"]),offset=offset))
 			except :
 				raise RuntimeError("Motionset not found")
 
@@ -143,10 +145,8 @@ class Motion(object) :
 			ids.append(key)	
 
 		for pose in zip(*write) :
-			print pose
 			dxl.set_goal_position(dict(zip(ids,pose)))
 			time.sleep(0.008/speed)
-
 
 
 class Motionset(object) :
@@ -167,14 +167,15 @@ class Motionset(object) :
 			self.init = True
 			for motion in self.motion :
 				for offset in self.offset :
-					#for m in motion :
 					motion.setoffset(offset)
 				motion.motion(speed)
 			
 	def exe(self,speed) :
+		
 		for motion in self.motion :
 			motion.motion(speed)	
-								
+		
+				
 
 class Custom(object) :
 	def __init__(self,motionset) :
@@ -188,81 +189,6 @@ class Custom(object) :
 				speed = motionset.speed
   
 			motionset.run(speed)
-
-class Head(object) :
-	def __init__(self,dxl,msg) :
-		self.pan = 19
-		self.tilt = 20
-		self.dxl = dxl
-		self.msg = msg
-		self.get = bool()
-		self.pan_left_to_right()
-	
-	def dxl_pan_write(self,write) :
-		self.dxl.angleWrite(self.pan,write)
-
-	def dxl_tilt_write(self,write) :
-		self.dxl.angleWrite(self.tilt,write)
- 
-	def pan_left_to_right(self,pan = 1.0) :
-		if not self.msg :
-			self.dxl_pan_write(pan)
-			time.sleep(0.01)
-			pan = pan + 1.0		
-			if pan == 90 :
-				self.pan_right_to_left()
-
-		else :
-			self.get = pan;
-			return None
-
-	def pan_right_to_left(self,pan = 90.0) :
-		if not self.msg :		
-			self.dxl_pan_write(pan) 
-			time.sleep(0.01)
-			pan = pan-1
-			if pan == -90 :
-				self.pan_left_to_right()
-
-		else :
-			self.get = pan
-			return None
-
-	def publish(self) :
-		return self.get
-flag = 1
-def listener(data) :
-	global flag
-	threshold = 0
-	head = Head(d,data.data)
-	pos = head.publish()
-  	pos = (pos-threshold)/6
-	flag1 = False
-	if data.data :
-		flag1 = True 
-	if flag == 1 and flag1 :
-		flag=0
-		if pos > threshold :
-			while pos > 0 :
-				l_turn.run()
-				time.sleep(0.1)
-				pos -= 1
-	
-		elif pos < threshold :
-			while pos < 0 :
-				r_turn.run()
-				time.sleep(0.1)
-				pos += 1			
-		
-	'''walk_iter = 10
-	d.angleWrite(19,0)
-	balance.run()
-	time.sleep(0.01)
-	walk_init.run()
-	while walk_iter > 0 :
-		fast_walk.run()
-		walk_iter -= 1'''
-
 
 #--------------------------------------------------------------MOTIONS--------------------------------------------------------------------------------
 json = JSON(path)
@@ -284,38 +210,90 @@ fast_walk = Custom(motionset=[fast_left,fast_right])
 r_turn = Motionset(json.parse(motion="27 RT"),speed=1.2,offset=[darwin])
 l_turn = Motionset(json.parse(motion="28 LT"),speed=1.2,offset=[darwin])
 #-----------------------------------------------------------------------------------------------------------------------------------------------------   
-'''def head(msg) :
-	rospy.loginfo(msg.data)
-	if msg.data == "not" or msg.data == "not in range" :
-		for pos in range(-90, 91,1):
-		    	speed = -int(1000 * (math.sin(math.pi * (pos - 90) / 180)))
-			if msg.data == "detected" :
+
+class Head(object) :
+	def __init__(self,dxl) :
+		self.pan = 19
+		self.pan_ang = 90
+		self.tilt = 20
+		self.dxl = dxl
+		self.iter_rl = 180
+		self.iter_lr = 180
+	
+	def dxl_pan_write(self,write) :
+		self.dxl.angleWrite(self.pan,write)
+
+	def dxl_tilt_write(self,write) :
+		self.dxl.angleWrite(self.tilt,write)
+ 
+	def pan_left_to_right(self,pan=1.0) :
+		if self.iter_lr > 0 :		
+			self.dxl_pan_write(self.pan_ang)
+			time.sleep(0.001)
+			self.pan_ang += pan
+			self.iter_lr -= pan		
+			return self.pan_ang
+
+	def pan_right_to_left(self,pan=1.0) :
+		if self.iter_rl > 0 :
+			self.dxl_pan_write(self.pan_ang)
+			time.sleep(0.001) 
+			self.pan_ang -= pan
+			self.iter_rl -= pan
+			return self.pan_ang
+
+	def update(self) :
+		self.iter_rl = 180
+		self.iter_lr = 180
 		
-				listener(mess)
+	
+pan_inst = 3.0
+def listener(data) :
+	if not data.data :
+		if head.iter_rl > 0 :
+			head.pan_right_to_left(pan = pan_inst)
+		elif head.iter_lr > 0 and not head.iter_rl :
+			head.pan_left_to_right(pan = pan_inst)
+			
+		else :
+			head.update()
 
-		    	dxl.set_moving_speed({19: speed})
-		    	dxl.set_goal_position({19:pos})
-			mess = pos
+	else :
+		pan_pos = d.returnPos(19)[19]	
+		d.angleWrite(19,0)
+		count = abs(pan_pos)/5
+		print pan_pos
+		if pan_pos > 0 :
+			while count > 0 :
+				l_turn.run()
+				time.sleep(0.1)
+				count -= 1
+			
+		else :
+			while count > 0 :
+				r_turn.run()
+				time.sleep(0.1)
+				count -= 1
 
-		for pos in range(90, -91, -1):	
-    			speed = -int(1000 * (math.sin(math.pi * (pos - 90) / 180)))
-			if msg.data == "detected" :
+		pub.unregister()
 		
-				listener(mess)
+		walk_iter = 5
+		while walk_iter > 0 :
+			fast_walk.run()
+			walk_iter -= 1
+		
 
-    			dxl.set_moving_speed({19: speed})
-    			dxl.set_goal_position({19:pos})
-			mess = pos
-				'''
 	
  
 if __name__ == "__main__":
 	d = Dynamixel(lock=20)
 	d.angleWrite(19,0)
-	d.angleWrite(20,65)
+	d.angleWrite(20,15)
+	head = Head(d)
 	balance.run()
 	raw_input("Proceed?")
         rospy.init_node('Dash', anonymous=True)
-        rospy.Subscriber('detect',Bool,listener,queue_size=10)
+        pub = rospy.Subscriber('detect',Bool,listener,queue_size=1)
         rospy.spin()
+
 	

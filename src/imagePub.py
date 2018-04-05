@@ -3,17 +3,17 @@ import cv2
 import numpy as np
 import time
 import rospy
-import Soccer
 from std_msgs.msg import Bool
 
 try:
 	index = sys.argv[1]
 except:
-	index = 1
+	index = 1 
 
 
 
 cap = cv2.VideoCapture(index)
+
 y,u,v = 0,99,50
 kernel = np.ones((5,5),np.uint8)
 
@@ -21,20 +21,20 @@ width = cap.get(3)
 height= cap.get(4)
 area = 0
 flag = 1
-iter = 180
-abc = 1
+print width
+print height
 #cv2.namedWindow("Masking")
 #cv2.namedWindow("YUV")
 def detect():
 
-	global cap,y,u,v,kernel,width,height,flag,area,iter,abc
+	global cap,y,u,v,kernel,width,height,flag,area
 	
 	while flag:
 		
 		ret,frame = cap.read()
 
 		img_yuv = cv2.cvtColor(frame,cv2.COLOR_BGR2YUV)
-		mask = cv2.inRange(img_yuv, (np.array([0,u-25,v-25])), (np.array([255,u+25,v+25])))
+		mask = cv2.inRange(img_yuv, (np.array([0,u-45,v-45])), (np.array([255,u+45,v+45])))
 
 		
 		erode = cv2.erode(mask,kernel,iterations = 1)
@@ -51,76 +51,60 @@ def detect():
 		 
 
 		
-		if contour :
+		if contour:
 			#cnt = contour[0]
 			cnt = max(contour, key = cv2.contourArea)		#getting contour with max area
 			(x,y),radius = cv2.minEnclosingCircle(cnt)		#calculating center of the ball
 			x,y,radius = int(x),int(y),int(radius)
-			cv2.circle(frame,(x,y),radius,(0,255,0),2)		#drawing circle across contour
+			cv2.circle(frame,(x,y),radius,(0,455,0),2)		#drawing circle across contour
 
 			area = radius*radius*3.14
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
           		#return True
-			x1,y1 = width/2,height/2
-			#if x<x1+100 and x>x1-100 and y<y1+100 and y>y1-100 : 
-				#print "detected"
-			abc = 0
-			return True
+			if area:
+				#if  x<width 
+				x1,y1 = width/2,height/2
+				print x1,x
+				print y1,y
+
+				param = 100
+
+				if x<x1+param and x>x1-param and y<y1+param and y>y1-param:
+					print "In Range"
+				elif x>x1+param and y>y1+param:
+					print "Look Right and Up "
+				elif x<x1-param and y>y1+param:
+					print "Look Left and Up"
+				elif x>x1+param and y<y1-param:
+					print "Look Right and Down "
+				elif x<x1-param and y<y1-param:
+					print "Look Left and Down"
+				elif x<x1-param:
+					print "Look Left"
+				elif x>x1+param:
+					print "Look Right"
+				elif y>y1+param:
+					print "Look Up"
+				else:
+					print "Look Down"
+
+
+				return True
 			
-			'''else:
-				return False
+		
+			#print "area: ",area," ","x: ",x," ","y: ",y	
 			
-			
-			print "area: ",area," ","x: ",x," ","y: ",y	
-			'''
 
 		else:
-			'''if abc:
-				if iter>0:
-					head.pan_right_to_left()
-				
-
-				else:
-					head.pan_left_to_right()
-					if iter == -179:
-						iter = 180
-				
-				iter -= 2
-			'''
+			print "Not detected"
+			#print "Contour Nahi He				
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
 			return False
 		
 
 	
-
-
-class Head(object) :
-	def __init__(self,dxl) :
-		self.pan = 19
-		self.pan_ang = 90
-		self.tilt = 20
-		self.dxl = dxl
-		self.prev_ang = 0
-	
-	def dxl_pan_write(self,write) :
-		self.dxl.angleWrite(self.pan,write)
-
-	def dxl_tilt_write(self,write) :
-		self.dxl.angleWrite(self.tilt,write)
- 
-	def pan_left_to_right(self,pan=2.0) :
-		self.dxl_pan_write(self.pan_ang)
-		time.sleep(0.001)
-		self.pan_ang += pan		
-		return self.pan_ang
-
-	def pan_right_to_left(self,pan=2.0) :
-		self.dxl_pan_write(self.pan_ang)
-		time.sleep(0.001) 
-		self.pan_ang -= pan
-		return self.pan_ang
 
 
 def talker() :
@@ -136,8 +120,6 @@ def talker() :
 
 if __name__=="__main__" :
 	try :
-		#dxl = Soccer.Dynamixel(lock=20)
-		#head = Head(dxl)
 		talker()
 	except rospy.ROSInterruptException :
 		cap.release()

@@ -23,6 +23,8 @@ area = 0
 flag = 1
 print width
 print height
+
+state = 0
 #cv2.namedWindow("Masking")
 #cv2.namedWindow("YUV")
 def detect():
@@ -61,47 +63,44 @@ def detect():
 			area = radius*radius*3.14
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
-          		#return True
+
 			if area:
-				#if  x<width 
 				x1,y1 = width/2,height/2
 				print x1,x
 				print y1,y
 
 				param = 100
 
-				if x<x1+param and x>x1-param and y<y1+param and y>y1-param:
-					print "In Range"
-				elif x>x1+param and y>y1+param:
-					print "Look Right and Up "
-				elif x<x1-param and y>y1+param:
-					print "Look Left and Up"
-				elif x>x1+param and y<y1-param:
-					print "Look Right and Down "
-				elif x<x1-param and y<y1-param:
-					print "Look Left and Down"
-				elif x<x1-param:
-					print "Look Left"
-				elif x>x1+param:
-					print "Look Right"
-				elif y>y1+param:
-					print "Look Up"
-				else:
-					print "Look Down"
+				if state == 0:
+					state = 1
+					return "stop"
+				if state == 1:
+					state = 2
+					return "balance"
 
+				if state == 2:
+					state = 3
+					return "move_f"
+				if state == 3:
+					state = 0
+					return "kick"
+					
 
-				return True
-			
-		
-			#print "area: ",area," ","x: ",x," ","y: ",y	
-			
 
 		else:
-			print "Not detected"
-			#print "Contour Nahi He				
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
-			return False
+			
+			if state == 0:
+				return "pan"
+			if state == 1:
+				return "side"
+			if state == 2:
+				return "tilt_d"
+			if state == 3:
+				return "align"
+
+
 		
 
 	

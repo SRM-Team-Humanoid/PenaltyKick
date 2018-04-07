@@ -75,43 +75,28 @@ def detect():
 
 				if state == 0:
 					state = 1
-					param = 75
 					return "stop"
 				if state == 1:
 					state = 2
-					paramx,paramy = 100,240
-					return "balance"
+					return "sleep"
 
-				if state == 2 or state == 3:
-					state = 3
-					paramx,paramy = 100,100					
+				if state == 2:					
 					return "move_f"
 				
 			else:
 				if state == 0:
-					state = 3
+					return "pan"
 				if state == 1:
-					return "side"
-				if state ==2:
-					state = 3	
-				if state == 3:
-					if x>x1+paramx and y>y1+paramy:
-						return "RU"
-					elif x<x1-paramx and y>y1+paramy:
-						return "LU"
-					elif x>x1+paramx and y<y1-paramy:
-						return "RD"
-					elif x<x1-paramx and y<y1-paramy:
-						return "LD"
-					elif x<x1-paramx:
-						return "L"
-					elif x>x1+paramx:
-						return "R"
-					elif y>y1+paramy:
-						return "U"
+					if X<x1+param and x>x1-param:
+						if y>y1+param:
+							return "tilt_u"
+						elif y<y1-param:
+							return "tilt_d"
 					else:
-						return "D"
-					state = 0
+						return "side"
+
+				if state ==2:
+					state = 1
 
 
 
@@ -123,7 +108,7 @@ def detect():
 			if state == 1:
 				return "side"
 		
-			if state == 3:
+			if state == 2:
 				state = 0
 
 

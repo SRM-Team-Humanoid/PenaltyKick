@@ -319,7 +319,7 @@ class Head(object) :
 		
 
 pan_inst = 3.0
-tilt_inst = 8.0
+tilt_inst = 5.0
 msg = str()
 stop = False
 state = "Nahi pata"
@@ -340,8 +340,8 @@ def listener(data) :
 		balance.run()	
 
 	elif data.data == "move_f":
-		if True :
-			fast_walk.run(spd=1.0)
+		if head.tilt_ang > -5 :
+			walk_motion.run()
 			time.sleep(0.3)
 		else :
 			rskick.run()
@@ -351,11 +351,11 @@ def listener(data) :
 
 	elif data.data == "side" :
 		if state == "left" :
-			left_side_step.run()
+			l_turn.run()
 			time.sleep(0.5)
 
 		elif state == "right" :
-			right_side_step.run()
+			r_turn.run()
 			time.sleep(0.5)
 
 	elif data.data == "tilt_d" :
@@ -367,39 +367,36 @@ def listener(data) :
 
 	elif data.data == "RU" :
 		right_side_step.run()
-		time.sleep(0.5)
 		head.tilt_up(tilt=tilt_inst)
 
 	elif data.data == "LU" :
 		left_side_step.run()
-		time.sleep(0.5)
 		head.tilt_up(tilt=tilt_inst)
 		
 	
 	elif data.data == "RD":
 		right_side_step.run()
-		time.sleep(0.5)
 		head.tilt_down(tilt=tilt_inst)
 
 	
 	elif data.data == "LD" :
 		left_side_step.run()
-		time.sleep(0.5)
 		head.tilt_down(tilt=tilt_inst)
 
 	elif data.data == "L" :
-		left_side_step.run()
-		time.sleep(0.5)
+		left_side_turn.run()
 
 	elif data.data == "R" :
-		right_side_step.run()
-		time.sleep(0.5)
+		right_side_turn.run()
 	
 	elif data.data == "U" :
 		head.tilt_up(tilt=tilt_inst)
 
 	elif data.data == "D" :
 		head.tilt_down(tilt=tilt_inst)
+
+
+
 
 		
 		
@@ -411,7 +408,6 @@ if __name__ == "__main__":
 	head = Head(ddxl)
 	balance.run()
 	raw_input("Proceed?")
-	r_turn.run()
         rospy.init_node('Dash', anonymous=True)
         pub = rospy.Subscriber('detect',String,listener,queue_size=1)	
         rospy.spin() 

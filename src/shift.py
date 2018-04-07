@@ -10,6 +10,7 @@ from signal import pause
 from bluedot import BlueDot
 import rospy
 from std_msgs.msg import String
+from std_msgs.msg import Float64
 import dynamixel
 import os
 #--------------------------------------------------------------OFFSETS------------------------------------------------------------------------------
@@ -100,41 +101,7 @@ class JSON(object) :
 			except :
 				raise RuntimeError("Motionset not found")
 
-                return motionset 
-
-
-'''class XML(object):
-
-    def __init__(self,file):
-	    	try:
-	            tree = ET.parse(file)
-	            self.root = tree.getroot()
-	        except:
-	            raise RuntimeError("File not found.")
-
-    def parse(self,motion):
-    		find = "PageRoot/Page[@name='" + motion + "']/steps/step"
-        	write = []
-        	p_frame = str()
-		p_pose = str()
-        	steps = [x for x in self.root.findall(find)]
-
-        	for step in steps:
-        	    	write.append(Motion(step.attrib['frame'], step.attrib['pose'], p_frame,p_pose))
-        	    	p_frame = step.attrib['frame']
-			p_pose = step.attrib['pose']
-	
-	        return write
-
-    def setparse(self,motion,offset=[]):
-	        find = "FlowRoot/Flow[@name='"+motion+"']/units/unit"
-	        steps = [x for x in self.root.findall(find)]
-	      
-	        motionset = []
-	        for step in steps:
-	           	 motionset.append(Motionset(self.parse(step.attrib['main']),speed=float(step.attrib['mainSpeed']),offset=offset))
-
-		return motionset '''
+                return motionset
 
 class Motion(object) :
 	def __init__(self,frame,pose,p_frame,p_pose) :
@@ -227,7 +194,7 @@ class Custom(object) :
 
 #--------------------------------------------------------------MOTIONS--------------------------------------------------------------------------------
 json = JSON(path)
-balance = Motionset(json.parse(motion="152 Balance"),offset=[darwin,hand])
+balance = Motionset(json.parse(motion="2 Balance"),offset=[darwin,hand])
 w1 = Motionset(json.parse(motion="32 F_S_L"),speed=2.1,offset=[darwin])
 w2 = Motionset(json.parse(motion="33 "),speed=2.1,offset=[darwin])
 w3 = Motionset(json.parse(motion="38 F_M_R"),speed=2.7,offset=[darwin])
@@ -255,166 +222,27 @@ l_step = Custom(json.setparse("24 F_E_L",offset=[darwin, hand]))
 r_step = Custom(json.setparse("25 F_E_R",offset=[darwin, hand]))
 
 kick = Custom(json.setparse("26 F_PShoot_R",offset = [darwin, hand]))
-rskick = Motionset(json.parse("39 Pass_R"),speed=1.5, offset=[darwin])
 #-----------------------------------------------------------------------------------------------------------------------------------------------------   
-
-class Head(object) :
-	def __init__(self,dxl) :
-		self.pan = 19
-		self.pan_ang = 90
-		self.tilt = 20
-		self.tilt_ang = 15
-		self.dxl = dxl
-		self.iter_rl = 180
-		self.iter_lr = 180
-		self.iter_tilt = 80
-
-	def dxl_pan_write(self,write) :
-		self.dxl.angleWrite(self.pan,write)
-
-	def dxl_tilt_write(self,write) :
-		self.dxl.angleWrite(self.tilt,write)
-
-	def tilt_down(self,tilt=1.0) :	
-		self.dxl_tilt_write(self.tilt_ang)
-		time.sleep(0.001)
-		self.tilt_ang -= tilt
-
-	def tilt_up(self,tilt) :
-		self.dxl_tilt_write(self.tilt_ang)
-		time.sleep(0.001)
-		self.tilt_ang -= tilt 
-		
  
-	def pan_left_to_right(self,pan=1.0) :
-		if self.iter_lr > 0 :		
-			self.dxl_pan_write(self.pan_ang)
-			time.sleep(0.001)
-			self.pan_ang += pan
-			self.iter_lr -= pan		
-			return self.pan_ang
-
-	def pan_right_to_left(self,pan=1.0) :
-		if self.iter_rl > 0 :
-			self.dxl_pan_write(self.pan_ang)
-			time.sleep(0.001) 
-			self.pan_ang -= pan
-			self.iter_rl -= pan
-			return self.pan_ang
-
-	def pan_motion(self) :
-		if self.iter_rl > 0 :
-			self.pan_right_to_left(pan = pan_inst)
-		elif self.iter_lr > 0 and not self.iter_rl :
-			self.pan_left_to_right(pan = pan_inst)
-			
-			
-		else :
-			self.update()
-			self.tilt_down()
-
-	def update(self) :
-		self.iter_rl = 180
-		self.iter_lr = 180
-		
-
-pan_inst = 3.0
-tilt_inst = 8.0
-msg = str()
-stop = False
-state = "Nahi pata"
-def listener(data) :
-	global state
-	rospy.loginfo("%s",data.data)
-	if data.data == "stop" :
-		pan_pos = ddxl.returnPos(head.pan)[19]
-		if pan_pos > 0 :
-			state = "left"
-
-		else :
-			state = "right"
-	
-		ddxl.angleWrite(19,0)
-
-	elif data.data == "balance":
-		balance.run()	
-
-	elif data.data == "move_f":
-		if True :
-			fast_walk.run(spd=1.0)
-			time.sleep(0.3)
-		else :
-			rskick.run()
-
-	elif data.data == "pan" :
-		head.pan_motion()
-
-	elif data.data == "side" :
-		if state == "left" :
-			left_side_step.run()
-			time.sleep(0.5)
-
-		elif state == "right" :
-			right_side_step.run()
-			time.sleep(0.5)
-
-	elif data.data == "tilt_d" :
-		head.tilt_down(tilt=tilt_inst)
-		time.sleep(0.2)
-
-	elif data.data == "align" :
-		pass
-
-	elif data.data == "RU" :
-		right_side_step.run()
-		time.sleep(0.5)
-		head.tilt_up(tilt=tilt_inst)
-
-	elif data.data == "LU" :
-		left_side_step.run()
-		time.sleep(0.5)
-		head.tilt_up(tilt=tilt_inst)
-		
-	
-	elif data.data == "RD":
-		right_side_step.run()
-		time.sleep(0.5)
-		head.tilt_down(tilt=tilt_inst)
-
-	
-	elif data.data == "LD" :
-		left_side_step.run()
-		time.sleep(0.5)
-		head.tilt_down(tilt=tilt_inst)
-
-	elif data.data == "L" :
-		left_side_step.run()
-		time.sleep(0.5)
-
-	elif data.data == "R" :
-		right_side_step.run()
-		time.sleep(0.5)
-	
-	elif data.data == "U" :
-		head.tilt_up(tilt=tilt_inst)
-
-	elif data.data == "D" :
-		head.tilt_down(tilt=tilt_inst)
-
-		
-		
-					
 if __name__ == "__main__":
 	ddxl = Dynamixel(lock=20)
 	ddxl.angleWrite(19,0)
-	ddxl.angleWrite(20,20)
-	head = Head(ddxl)
+	ddxl.angleWrite(20,50)
 	balance.run()
 	raw_input("Proceed?")
-	r_turn.run()
-        rospy.init_node('Dash', anonymous=True)
-        pub = rospy.Subscriber('detect',String,listener,queue_size=1)	
-        rospy.spin() 
+        #rospy.init_node('Dash', anonymous=True)
+        pub = rospy.Subscriber('shift',Float64,move,queue_size=1)
+	pub_new = rospy.Subscribe('detect',String,det,queue_size=1)
+	while True :
+		if move > 0 :
+			left_side_step.run()
+			if ret == "IR" :
+				break
 
+		else :
+			right_side_step.run()
+			if ret == "IR" :
+				break
+	rospy.spin()
 
 	

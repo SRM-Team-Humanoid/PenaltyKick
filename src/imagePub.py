@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 import time
 import rospy
-from std_msgs.msg import Bool
+from std_msgs.msg import String
+
 
 try:
 	index = sys.argv[1]
@@ -21,15 +22,16 @@ width = cap.get(3)
 height= cap.get(4)
 area = 0
 flag = 1
-print width
-print height
-
+#	width = 640
+#	height = 480
 state = 0
-#cv2.namedWindow("Masking")
-#cv2.namedWindow("YUV")
+cv2.namedWindow("Masking")
+cv2.namedWindow("YUV")
+paramx,paramy = 50,50
+x1,y1 = int(width/2),int(height/2)
 def detect():
 
-	global cap,y,u,v,kernel,width,height,flag,area
+	global cap,y,u,v,kernel,width,height,flag,area,state,paramx,paramy,x1,y1
 	
 	while flag:
 		
@@ -51,7 +53,7 @@ def detect():
 		if cv2.waitKey(1) == 27:
 			flag = 0
 		 
-
+		cv2.rectangle(frame,(x1-paramx,y1-paramy),(x1+paramx,y1+paramy),(0,255,0),3)
 		
 		if contour:
 			#cnt = contour[0]
@@ -63,42 +65,66 @@ def detect():
 			area = radius*radius*3.14
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
+			
+			
+			
 
-			if area:
-				x1,y1 = width/2,height/2
-				print x1,x
-				print y1,y
-
-				param = 100
+			if x<x1+paramx and x>x1-paramx and y<y1+paramy and y>y1-paramy:
+				#print "In Range"
+				#print state
 
 				if state == 0:
 					state = 1
+					param = 75
 					return "stop"
 				if state == 1:
 					state = 2
+					paramx,paramy = 100,240
 					return "balance"
 
-				if state == 2:
+				if state == 2 or state == 3:
 					state = 3
+					paramx,paramy = 100,100					
 					return "move_f"
+				
+			else:
+				if state == 0:
+					state = 3
+				if state == 1:
+					return "side"
+				if state ==2:
+					state = 3	
 				if state == 3:
+					if x>x1+paramx and y>y1+paramy:
+						return "RU"
+					elif x<x1-paramx and y>y1+paramy:
+						return "LU"
+					elif x>x1+paramx and y<y1-paramy:
+						return "RD"
+					elif x<x1-paramx and y<y1-paramy:
+						return "LD"
+					elif x<x1-paramx:
+						return "L"
+					elif x>x1+paramx:
+						return "R"
+					elif y>y1+paramy:
+						return "U"
+					else:
+						return "D"
 					state = 0
-					return "kick"
-					
+
 
 
 		else:
 			cv2.imshow("Masking",mask)
 			cv2.imshow("YUV",frame)
-			
 			if state == 0:
 				return "pan"
 			if state == 1:
 				return "side"
-			if state == 2:
-				return "tilt_d"
+		
 			if state == 3:
-				return "align"
+				state = 0
 
 
 		
@@ -108,7 +134,7 @@ def detect():
 
 def talker() :
 
-	pub=rospy.Publisher('detect',Bool,queue_size=10)
+	pub=rospy.Publisher('detect',String,queue_size=10)
 	rospy.init_node('talker',anonymous=True) 
 	rate=rospy.Rate(10)
 

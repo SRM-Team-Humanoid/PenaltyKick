@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="soccer" name="publisher" type="Dash-img.py" output="screen"/>
+  <node pkg="soccer" name="subscriber" type="Dash.py" output="screen"/>
+ <node pkg="soccer" name="subscriber2" type="shift.py" output="screen"/>
+</launch>

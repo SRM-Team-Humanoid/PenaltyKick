@@ -74,6 +74,7 @@ def detect():
 					state = 1
 					return "stop"
 				if state == 1:
+<<<<<<< HEAD
 					print "state1"
 					stop = True
 			else :
@@ -81,6 +82,30 @@ def detect():
 					return "pan"
 				if state == 1:
 					return "side"
+=======
+					state = 2
+					return "sleep"
+
+				if state == 2:					
+					return "move_f"
+				
+			else:
+				if state == 0:
+					return "pan"
+				if state == 1:
+					if X<x1+param and x>x1-param:
+						if y>y1+param:
+							return "tilt_u"
+						elif y<y1-param:
+							return "tilt_d"
+					else:
+						return "side"
+
+				if state ==2:
+					state = 1
+
+
+>>>>>>> e7fe4c359c5475ae139e32808963c3e7c7437dde
 
 		else:
 			cv2.imshow("YUV",frame)
@@ -88,6 +113,12 @@ def detect():
 				return "pan"
 			if state == 1:
 				return "side"
+<<<<<<< HEAD
+=======
+		
+			if state == 2:
+				state = 0
+>>>>>>> e7fe4c359c5475ae139e32808963c3e7c7437dde
 
 
 def getArea() :

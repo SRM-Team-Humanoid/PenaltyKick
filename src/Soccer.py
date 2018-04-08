@@ -263,7 +263,7 @@ class Head(object) :
 		self.pan = 19
 		self.pan_ang = 90
 		self.tilt = 20
-		self.tilt_ang = 15
+		self.tilt_ang = 40
 		self.dxl = dxl
 		self.iter_rl = 180
 		self.iter_lr = 180
@@ -283,7 +283,7 @@ class Head(object) :
 	def tilt_up(self,tilt) :
 		self.dxl_tilt_write(self.tilt_ang)
 		time.sleep(0.001)
-		self.tilt_ang -= tilt 
+		self.tilt_ang += tilt 
 		
  
 	def pan_left_to_right(self,pan=1.0) :
@@ -302,16 +302,8 @@ class Head(object) :
 			self.iter_rl -= pan
 			return self.pan_ang
 
-	def pan_motion(self) :
-		if self.iter_rl > 0 :
-			self.pan_right_to_left(pan = pan_inst)
-		elif self.iter_lr > 0 and not self.iter_rl :
-			self.pan_left_to_right(pan = pan_inst)
+
 			
-			
-		else :
-			self.update()
-			self.tilt_down()
 
 	def update(self) :
 		self.iter_rl = 180
@@ -319,102 +311,79 @@ class Head(object) :
 		
 
 pan_inst = 3.0
-tilt_inst = 8.0
+tilt_inst = 5.0
 msg = str()
-stop = False
 state = "Nahi pata"
+pan_pos = 0
+count_l=count_r=0
 def listener(data) :
-	global state
+	global pan_pos,count_l,count_r
 	rospy.loginfo("%s",data.data)
 	if data.data == "stop" :
-		pan_pos = ddxl.returnPos(head.pan)[19]
-		if pan_pos > 0 :
-			state = "left"
-
-		else :
-			state = "right"
-	
+		time.sleep(1)
+		pan_pos = ddxl.returnPos(head.pan)[19]	
 		ddxl.angleWrite(19,0)
 
-	elif data.data == "balance":
-		balance.run()	
 
-	elif data.data == "move_f":
-		if True :
-			fast_walk.run(spd=1.0)
-			time.sleep(0.3)
-		else :
-			rskick.run()
-
+	elif data.data == "forward" :
+		walk_motion.run()
+		time.sleep(0.3)
+	
+	elif data.data == "thresh" :
+		balance.run()
+		time.sleep(1)
+		kick.run(spd=1.0)
+			
 	elif data.data == "pan" :
-		head.pan_motion()
+		if head.iter_rl > 0 :
+			head.pan_right_to_left(pan = pan_inst)
+		elif head.iter_lr > 0 and not head.iter_rl :
+			head.pan_left_to_right(pan = pan_inst)
+			
+		else :
+			head.tilt_down(tilt=5)
+			head.update()
+			
 
 	elif data.data == "side" :
-		if state == "left" :
-			left_side_step.run()
-			time.sleep(0.5)
+		if pan_pos > 0 :
+			l_turn.run()
+			time.sleep(0.7)
 
-		elif state == "right" :
-			right_side_step.run()
-			time.sleep(0.5)
+		else :
+			r_turn.run()
+			time.sleep(0.7)
+
+
+	elif data.data == "left" :
+		l_turn.run()
+		count_l +=1
+		time.sleep(0.1)
+
+	elif data.data == "right" :
+		r_turn.run()
+		count_r += 1
+		time.sleep(0.1)
 
 	elif data.data == "tilt_d" :
 		head.tilt_down(tilt=tilt_inst)
-		time.sleep(0.2)
 
-	elif data.data == "align" :
-		pass
-
-	elif data.data == "RU" :
-		right_side_step.run()
-		time.sleep(0.5)
-		head.tilt_up(tilt=tilt_inst)
-
-	elif data.data == "LU" :
-		left_side_step.run()
-		time.sleep(0.5)
-		head.tilt_up(tilt=tilt_inst)
-		
-	
-	elif data.data == "RD":
-		right_side_step.run()
-		time.sleep(0.5)
-		head.tilt_down(tilt=tilt_inst)
-
-	
-	elif data.data == "LD" :
-		left_side_step.run()
-		time.sleep(0.5)
-		head.tilt_down(tilt=tilt_inst)
-
-	elif data.data == "L" :
-		left_side_step.run()
-		time.sleep(0.5)
-
-	elif data.data == "R" :
-		right_side_step.run()
-		time.sleep(0.5)
-	
-	elif data.data == "U" :
-		head.tilt_up(tilt=tilt_inst)
-
-	elif data.data == "D" :
-		head.tilt_down(tilt=tilt_inst)
-
-		
-		
+	if ddxl.returnPos(20)[20] < -15.0 :
+		time.sleep(1)
+		balance.run
+		time.sleep(1)
+		kick.run(spd=1.0)
 					
 if __name__ == "__main__":
 	ddxl = Dynamixel(lock=20)
 	ddxl.angleWrite(19,0)
-	ddxl.angleWrite(20,20)
+	ddxl.angleWrite(20,40)
 	head = Head(ddxl)
 	balance.run()
 	raw_input("Proceed?")
-	r_turn.run()
-        rospy.init_node('Dash', anonymous=True)
+	rospy.init_node('Dash', anonymous=True)
         pub = rospy.Subscriber('detect',String,listener,queue_size=1)	
-        rospy.spin() 
+        rospy.spin()
 
 
-	
+	 	

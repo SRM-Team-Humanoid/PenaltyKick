@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-import cv2
+mport cv2
 import numpy as np
 import time
 import rospy
@@ -20,6 +19,9 @@ kernel = np.ones((5,5),np.uint8)
 
 width = cap.get(3)
 height= cap.get(4)
+
+cap.set(3,width/3)
+cap.set(4,height/3)
 
 flag1=0
 area = 0
@@ -59,22 +61,21 @@ def detect():
 		if cv2.waitKey(1) == 27:
 			flag = 0
 		 
-		cv2.rectangle(frame,(x1-paramx,y1-paramy),(x1+paramx,y1+paramy),(0,255,0),3)
+		#cv2.rectangle(frame,(x1-paramx,y1-paramy),(x1+paramx,y1+paramy),(0,255,0),3)
 		
 		if contour:
 			cnt = max(contour, key = cv2.contourArea)		
 			(x,y),radius = cv2.minEnclosingCircle(cnt)		
 			x,y,radius = int(x),int(y),int(radius)
-			cv2.circle(frame,(x,y),radius,(0,455,0),2)		
-			area = radius*radius*3.14
-			cv2.imshow("YUV",frame)
+			#cv2.circle(frame,(x,y),radius,(0,455,0),2)		
+			#area = radius*radius*3.14
+			#cv2.imshow("YUV",frame)
 			
 			if x<x1+paramx and x>x1-paramx and y<y1+paramy and y>y1-paramy:
 				if state == 0:
 					state = 1
 					return "stop"
 				if state == 1:
-<<<<<<< HEAD
 					print "state1"
 					stop = True
 			else :
@@ -82,9 +83,9 @@ def detect():
 					return "pan"
 				if state == 1:
 					return "side"
-=======
+				
 					state = 2
-					return "sleep"
+					#return "sleep"
 
 				if state == 2:					
 					return "move_f"
@@ -104,21 +105,15 @@ def detect():
 				if state ==2:
 					state = 1
 
-
->>>>>>> e7fe4c359c5475ae139e32808963c3e7c7437dde
-
 		else:
 			cv2.imshow("YUV",frame)
 			if state == 0:
 				return "pan"
 			if state == 1:
 				return "side"
-<<<<<<< HEAD
-=======
 		
 			if state == 2:
 				state = 0
->>>>>>> e7fe4c359c5475ae139e32808963c3e7c7437dde
 
 
 def getArea() :
@@ -166,7 +161,6 @@ def getArea() :
 
 		if cv2.waitKey(1) == 27:
 			break
-		cv2.imshow("YUV",f)
 		
 		return move
 
@@ -196,6 +190,7 @@ if __name__=="__main__" :
 	except rospy.ROSInterruptException :
 		cap.release()
 		cv2.destroyAllWindows()
+
 
 
 
